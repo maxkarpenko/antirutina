@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Антирутина — убираем лишние действия, оставляем результат</title>
+<meta name="description" content="Находим ручную работу, которую ваши люди делают каждый день, и передаём её программам. Готовый процесс без настройки и обучения.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Антирутина — убираем лишние действия. Оставляем результат.">
+<meta property="og:description" content="Убираем ручную рутину: заявки, документы, отчёты, напоминания. Разбор процессов бесплатно.">
+<meta property="og:locale" content="ru_RU">
+<link rel="icon" href="logo.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+
+<!--
+  ==========================================================================
+  АНТИРУТИНА. Один файл + logo.png рядом. Загружается на хостинг как есть.
+  ==========================================================================
+  1) TELEGRAM — внизу файла, строка  const TELEGRAM = "..."
+  2) ФОНОВАЯ КАРТИНКА ГЕРОЯ — переменная --hero-image в блоке :root ниже.
+  3) ФОТО В КНОПКЕ ЗАПИСИ — атрибут src у .book__avatar, ищите ФОТО.
+  4) СПИСОК ПРОГРАММ в бегущей строке — проверьте, со всеми ли вы работаете.
+  ==========================================================================
+-->
+
+<style>
+:root{
+  --bg:#ffffff;
+  --text:#0a0a0a;
+  --muted:#6b6b6b;
+  --button-bg:#0a0a0a;
+  --button-text:#ffffff;
+  --border-soft:rgba(0,0,0,.08);
+  --green:#17c964;
+  --brand:#d32f26;              /* красный из логотипа, только для мазка */
+  --surface:#fbfbfb;
+
+  --hero-image:url("https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260626_041422_4a459e05-abce-4150-9fb7-4ededc423cd1.png&w=1280&q=85");
+
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --wrap:1200px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:17px; line-height:1.5; letter-spacing:-.02em;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+img{ display:block; max-width:100%; }
+a{ color:inherit; text-decoration:none; }
+h1,h2,h3{ margin:0; font-weight:600; }
+p{ margin:0; }
+
+.serif{ font-family:"Source Serif 4",Georgia,serif; }
+.nb{ white-space:nowrap; }
+.italic{ font-style:italic; }
+.wrap{ width:100%; max-width:var(--wrap); margin-inline:auto; padding-inline:36px; }
+
+/* ================= НАВИГАЦИЯ ================= */
+.nav{ position:fixed; inset:0 0 auto 0; z-index:100; }
+.nav__in{
+  max-width:var(--wrap); margin-inline:auto; padding:19px 36px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+}
+.logo{ display:inline-flex; align-items:center; gap:4px; }
+.logo img{ height:44px; width:auto; }
+.logo__tm{ font-family:"Inter",sans-serif; font-size:14px; font-weight:600; align-self:flex-start; margin-top:4px; }
+
+.menu-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--button-bg); color:var(--button-text);
+  font-size:14px; font-weight:500; letter-spacing:-.02em;
+  padding:11px 18px; border:0; border-radius:999px; cursor:pointer;
+  transition:transform 160ms var(--ease-out), opacity 160ms ease;
+}
+.menu-btn svg{ transition:transform 300ms var(--ease-out); }
+.menu-btn[aria-expanded="true"] svg{ transform:rotate(180deg); }
+@media (hover:hover) and (pointer:fine){ .menu-btn:hover{ transform:translateY(-1px); } }
+.menu-btn:active{ transform:scale(.97); transition:transform 100ms ease-out; }
+
+/* ================= ШТОРКА ================= */
+.drawer{
+  position:fixed; inset:0; z-index:99; background:var(--bg);
+  display:flex; flex-direction:column; justify-content:center;
+  opacity:0; visibility:hidden; transition:opacity .4s ease, visibility .4s;
+}
+.drawer.is-open{ opacity:1; visibility:visible; }
+.drawer__links{ display:flex; flex-direction:column; align-items: center; gap:6px;}
+.drawer__links a{
+  font-size:48px; font-weight:500; letter-spacing:-.04em; line-height:1.2;
+  transition:opacity 200ms ease;
+}
+@media (hover:hover) and (pointer:fine){ .drawer__links a:hover{ opacity:.45; } }
+.drawer__foot{
+  position:absolute; inset:auto 0 0 0; padding:28px 36px; text-align:center;
+  font-size:13px; color:var(--muted);
+}
+
+/* ================= ГЕРОЙ ================= */
+.hero{
+  position:relative; min-height:850px; padding:160px 36px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; overflow:hidden; isolation:isolate;
+}
+.hero::before{
+  content:""; position:absolute; inset:0; z-index:-2;
+  background-color:#f4f4f2;
+  background-image:var(--hero-image);
+  background-size:cover; background-position:center;
+}
+/* пелена: текст обязан читаться поверх любой картинки */
+.hero::after{
+  content:""; position:absolute; inset:0; z-index:-1;
+  background:radial-gradient(120% 80% at 50% 45%, rgba(255,255,255,.86) 0%, rgba(255,255,255,.62) 45%, rgba(255,255,255,.28) 100%);
+}
+
+/* декоративные дуги */
+.lines{ position:absolute; inset:0; z-index:-1; pointer-events:none; }
+.line{
+  position:absolute; border:2.5px solid #FCFAF8; opacity:0;
+  animation:line-pulse 5s ease-in-out infinite;
+}
+.line--l{ border-left:0; border-radius:0 80% 80% 0/0 80% 80% 0; }
+.line--r{ border-right:0; border-radius:80% 0 0 80%/80% 0 0 80%; }
+.line--t{ display:none; border-top:0; border-radius:0 0 80% 80%/0 0 80% 80%; }
+
+@keyframes line-pulse{
+  0%{ opacity:0; transform:scale(1); }
+  15%{ opacity:.9; }
+  70%{ opacity:.4; }
+  100%{ opacity:0; transform:scale(.85); }
+}
+
+/* бегущая строка */
+.marquee{ position:relative; overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,black 12%,black 88%,transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0%,black 12%,black 88%,transparent 100%);
+}
+.marquee__track{ display:flex; width:max-content; animation:marquee-left 30s linear infinite; }
+.marquee__group{ display:flex; align-items:center; flex:none; }
+@keyframes marquee-left{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+.ticker{ max-width:500px; width:100%; height:36px; margin-bottom:30px; }
+.ticker .marquee__group{ gap:8px; padding-right:8px; }
+.ticker span{
+  font-size:13px; font-weight:500; color:var(--muted); white-space:nowrap;
+  padding:6px 14px; border-radius:999px; background:rgb(251,251,251);
+  border:1px solid var(--border-soft);
+}
+
+.hero h1{
+  max-width:680px; font-size:72px; line-height:1.03; letter-spacing:-.07em;
+  font-weight:600; margin-bottom:26px;
+}
+.hero h1 .serif{ letter-spacing:-.08em; font-weight:600; }
+.hero h1 sup{ font-family:"Inter",sans-serif; font-size:24px; font-weight:600; vertical-align:super; letter-spacing:-.02em; }
+
+/* фирменный мазок, единственное место с красным */
+.struck{ position:relative; display:inline-block; white-space:nowrap; }
+.struck svg{
+  position:absolute; left:-1%; top:53%; width:102%; height:.5em;
+  transform:translateY(-50%); overflow:visible; pointer-events:none;
+  clip-path:inset(-70% 100% -70% -8%);
+}
+.struck svg path{ fill:none; stroke:var(--brand); stroke-width:6; stroke-linecap:round; vector-effect:non-scaling-stroke; }
+.is-in .struck svg{ animation:sweep 520ms var(--ease-out) .25s forwards; }
+@keyframes sweep{ to{ clip-path:inset(-70% -8% -70% -8%); } }
+
+.hero__sub{ max-width:476px; font-size:17px; line-height:1.45; font-weight:400; color:var(--muted); margin-bottom:34px; }
+
+.cta{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center; }
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  height:56px; padding:18px 30px; border-radius:999px;
+  background:var(--button-bg); color:var(--button-text);
+  font-size:15px; font-weight:600; letter-spacing:-.02em; white-space:nowrap;
+  transition:transform 160ms var(--ease-out), box-shadow 160ms ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{ transform:translateY(-1px); box-shadow:0 4px 20px rgba(0,0,0,.12); }
+}
+.btn:active{ transform:scale(.98); transition:transform 100ms ease-out; }
+
+.book{
+  display:inline-flex; align-items:center; gap:12px;
+  background:#fff; border:4px solid rgb(248,248,248); border-radius:999px;
+  padding:8px 24px 8px 8px; text-align:left;
+  transition:transform 160ms var(--ease-out), border-color 160ms ease;
+}
+@media (hover:hover) and (pointer:fine){ .book:hover{ transform:translateY(-1px); border-color:#f0f0f0; } }
+.book:active{ transform:scale(.98); transition:transform 100ms ease-out; }
+.book__avatar{ width:40px; height:40px; border-radius:50%; object-fit:cover; background:#eee; flex:none; }
+.book__primary{ font-size:14px; font-weight:600; color:var(--text); }
+.book__secondary{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:rgb(152,152,152); }
+.book__dot{ width:8px; height:8px; border-radius:50%; background:rgb(29,204,93); flex:none; }
+
+.hero__blur{
+  position:absolute; inset:auto 0 0 0; height:178px; z-index:-1; pointer-events:none;
+  background:linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,.4) 40%, #fff 100%);
+}
+
+/* ================= ПРОГРАММЫ ================= */
+.tools{ padding:36px; }
+.tools__in{
+  max-width:var(--wrap); margin-inline:auto;
+  display:flex; align-items:center; gap:48px;
+}
+.tools__label{ max-width:180px; font-size:14px; font-weight:500; color:var(--muted); flex:none; }
+.tools__marquee{ flex:1; min-width:0; height:28px; }
+.tools .marquee__group{ gap:44px; padding-right:44px; }
+.tools b{ font-size:16px; font-weight:600; color:var(--text); white-space:nowrap; letter-spacing:-.02em; }
+
+/* ================= ОБЩИЕ СЕКЦИИ ================= */
+.section{ padding-block:clamp(72px,9vw,128px); scroll-margin-top:96px; }
+.section--alt{ background:var(--surface); border-block:1px solid var(--border-soft); }
+.head{ max-width:100ch; margin-bottom:clamp(40px,5vw,64px); }
+.head h2{ font-size:clamp(30px,4vw,52px); line-height:1.06; letter-spacing:-.05em; margin-bottom:16px; }
+.head p{ font-size:17px; line-height:1.5; color:var(--muted); max-width:44ch; letter-spacing:-.015em; }
+h2{ letter-spacing:-.05em; }
+h3{ letter-spacing:-.035em; }
+
+.stair{ display:grid; grid-template-columns:repeat(12,1fr); }
+.stair__item{ grid-column:1/span 5; }
+.stair__item+.stair__item{ grid-column:5/span 5; margin-top:clamp(32px,4vw,64px); }
+.stair__item+.stair__item+.stair__item{ grid-column:8/span 5; }
+.stair h3{ font-size:22px; line-height:1.2; padding-top:16px; border-top:2px solid var(--text); margin-bottom:12px; }
+.stair p{ color:var(--muted); font-size:16px; line-height:1.5; }
+
+.gains{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(36px,4.5vw,64px) clamp(36px,5vw,80px); }
+.gains h3{ font-size:clamp(24px,2.6vw,32px); line-height:1.1; margin-bottom:12px; }
+.gains p{ color:var(--muted); font-size:16px; line-height:1.5; }
+
+.groups{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(32px,4vw,52px) clamp(36px,5vw,80px); }
+.group{ border-top:1px solid var(--border-soft); padding-top:20px; }
+.group h3{ font-size:18px; margin-bottom:14px; }
+.group ul{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.group li{
+  font-size:16px; color:var(--muted); letter-spacing:-.015em;
+  text-decoration:line-through; text-decoration-color:rgba(211,47,38,.75); text-decoration-thickness:1.5px;
+}
+
+.steps{ border-top:1px solid var(--border-soft); }
+.step{
+  display:grid; grid-template-columns:64px 1fr 1.15fr; gap:clamp(16px,3vw,40px);
+  padding-block:clamp(28px,3vw,38px); border-bottom:1px solid var(--border-soft); align-items:start;
+}
+.step:last-child{ border-bottom:0; }
+.step__n{ font-family:"Source Serif 4",Georgia,serif; font-style:italic; font-size:28px; line-height:1; color:var(--text); }
+.step h3{ font-size:24px; line-height:1.15; }
+.step p{ color:var(--muted); font-size:16px; line-height:1.5; }
+
+.price{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(32px,4vw,64px); align-items:center; }
+.price h2{ font-size:clamp(28px,3.4vw,42px); line-height:1.08; }
+.price p{ color:var(--muted); font-size:17px; line-height:1.5; margin-top:18px; max-width:44ch; }
+.price__box{ background:var(--surface); border:1px solid var(--border-soft); border-radius:20px; padding:clamp(28px,3vw,40px); }
+.price__box ul{ list-style:none; margin:0; padding:0; display:grid; gap:16px; }
+.price__box li{ display:flex; gap:14px; align-items:flex-start; font-size:16px; }
+.price__box svg{ flex:none; margin-top:3px; color:var(--green); }
+
+.faq{ border-top:1px solid var(--border-soft); }
+.faq details{ border-bottom:1px solid var(--border-soft); }
+.faq summary{
+  cursor:pointer; list-style:none; position:relative;
+  padding:26px 48px 26px 0; font-size:20px; font-weight:500; letter-spacing:-.035em;
+}
+.faq summary::-webkit-details-marker{ display:none; }
+.faq summary::after{
+  content:""; position:absolute; right:8px; top:50%; width:11px; height:11px;
+  border-right:2px solid var(--text); border-bottom:2px solid var(--text);
+  transform:translateY(-70%) rotate(45deg); transition:transform 200ms var(--ease-out);
+}
+.faq details[open] summary::after{ transform:translateY(-30%) rotate(-135deg); }
+.faq p{ padding:0 10% 30px 0; color:var(--muted); font-size:16px; line-height:1.55; }
+@supports (interpolate-size:allow-keywords){
+  :root{ interpolate-size:allow-keywords; }
+  .faq details::details-content{ block-size:0; overflow:hidden; transition:block-size 260ms var(--ease-out), content-visibility 260ms allow-discrete; }
+  .faq details[open]::details-content{ block-size:auto; }
+}
+
+.final{ text-align:center; }
+.final h2{ font-size:clamp(34px,5vw,64px); line-height:1.04; letter-spacing:-.06em; max-width:16ch; margin:0 auto 20px; }
+.final p{ color:var(--muted); font-size:17px; line-height:1.45; max-width:46ch; margin:0 auto 34px; }
+.final .cta{ margin-bottom:30px; }
+.final__sign{ font-size:13px; font-weight:500; text-transform:uppercase; color:var(--muted); }
+
+.footer{ border-top:1px solid var(--border-soft); padding-block:36px 44px; }
+.footer__in{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:20px 32px; }
+.footer__in img{ height:38px; width:auto; }
+.footer__tag{ font-size:14px; color:var(--muted); }
+.footer a.link{ font-size:14px; color:var(--muted); border-bottom:1px solid var(--border-soft); }
+@media (hover:hover) and (pointer:fine){ .footer a.link:hover{ color:var(--text); border-color:var(--text); } }
+
+/* ================= ПОЯВЛЕНИЕ ================= */
+.reveal{ opacity:0; transform:translateY(14px); transition:opacity 380ms ease, transform 420ms var(--ease-out); }
+.reveal.is-in{ opacity:1; transform:none; }
+.reveal:not(.is-in){ will-change:opacity,transform; }
+
+/* ================= АДАПТИВ ================= */
+@media (max-width:1200px){
+  .wrap,.nav__in{ padding-inline:32px; }
+  .nav__in{ padding-block:16px; }
+  .hero{ padding:140px 32px; }
+  .hero h1{ font-size:clamp(60px,8vw,72px); }
+  .drawer__links a{ font-size:40px; }
+}
+
+@media (max-width:810px){
+  .wrap{ padding-inline:24px; }
+  .nav__in{ padding:14px 20px; }
+  .logo img{ height:38px; }
+  .hero{ min-height:760px; padding:120px 24px 96px; }
+  .hero::before{ background-size:cover; transform:rotate(90deg) scale(1.9); }
+  .hero h1{ font-size:clamp(44px,13vw,52px); letter-spacing:-.05em; line-height:1.08; }
+  .hero h1 sup{ font-size:16px; }
+  .line--l,.line--r{ display:none; }
+  .line--t{ display:block; }
+  .cta{ flex-direction:column; width:100%; max-width:320px; margin-inline:auto; }
+  .cta .btn,.cta .book{ width:100%; }
+  .book{ justify-content:flex-start; }
+  .drawer__links a{ font-size:32px; }
+  .tools__in{ flex-direction:column; align-items:flex-start; gap:20px; }
+  .tools__label{ max-width:none; }
+  .tools__marquee{ width:100%; }
+  .stair{ grid-template-columns:1fr; gap:30px; }
+  .stair__item,.stair__item+.stair__item,.stair__item+.stair__item+.stair__item{ grid-column:1; margin-top:0; }
+  .gains,.groups,.price{ grid-template-columns:1fr; }
+  .step{ grid-template-columns:44px 1fr; }
+  .step p{ grid-column:2; }
+  .faq p{ padding-right:0; }
+}
+
+@media (prefers-reduced-transparency:reduce){
+  .hero::after{ background:rgba(255,255,255,.9); }
+}
+@media (prefers-contrast:more){
+  :root{ --muted:#3d3d3d; --border-soft:rgba(0,0,0,.32); }
+  .hero::after{ background:rgba(255,255,255,.92); }
+}
+@media (prefers-reduced-motion:reduce){
+  html{ scroll-behavior:auto; }
+  .marquee__track,.line{ animation:none; }
+  .line{ opacity:.35; }
+  .reveal{ transform:none; transition:opacity 200ms ease; }
+  .struck svg{ clip-path:none; animation:none; }
+  .btn:hover,.btn:active,.book:hover,.book:active,.menu-btn:hover,.menu-btn:active{ transform:none; }
+  .faq summary::after,.faq details::details-content,.menu-btn svg{ transition:none; }
+}
+</style>
+</head>
+
+<body id="top">
+<noscript><style>.reveal{opacity:1;transform:none}.struck svg{clip-path:none}</style></noscript>
+
+<!-- ================= НАВИГАЦИЯ ================= -->
+<header class="nav">
+  <div class="nav__in">
+    <a class="logo" href="#top" aria-label="Антирутина, на главную">
+      <img src="logo.png" alt="Антирутина" width="437" height="168">
+    </a>
+    <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="drawer">
+      Меню
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="drawer" id="drawer">
+  <nav class="drawer__links">
+    <a href="#chto">Что делаем</a>
+    <a href="#primery">Что вычёркиваем</a>
+    <a href="#kak">Как проходит</a>
+    <a href="#cena">Цена</a>
+    <a href="#voprosy">Вопросы</a>
+    <a href="#" class="js-tg">Написать в Telegram</a>
+  </nav>
+  <div class="drawer__foot">© <span id="year">2026</span> Антирутина. Автоматизация бизнес-процессов.</div>
+</div>
+
+<main>
+
+  <!-- ================= ГЕРОЙ ================= -->
+  <section class="hero reveal" id="hero">
+    <div class="lines" id="lines" aria-hidden="true"></div>
+
+    <div class="ticker marquee">
+      <div class="marquee__track">
+        <div class="marquee__group">
+          <span>Заявки в CRM</span><span>Документы</span><span>Отчёты</span><span>Напоминания</span><span>Согласования</span>
+        </div>
+        <div class="marquee__group" aria-hidden="true">
+          <span>Заявки в CRM</span><span>Документы</span><span>Отчёты</span><span>Напоминания</span><span>Согласования</span>
+        </div>
+      </div>
+    </div>
+
+    <h1>
+      Убираем <span class="nb"><span class="struck">лишние действия<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7.4 C 48 3.4, 96 10.6, 140 5.8 S 180 4.4, 198 8.2"/></svg></span>.</span>
+      Оставляем <span class="serif italic">результат</span>.
+    </h1>
+
+    <p class="hero__sub">Находим ручную работу, которую ваши люди делают каждый день, и передаём её программам. Вам не нужно ничего настраивать — мы отдаём готовое.</p>
+
+    <div class="cta">
+      <a class="btn js-tg" href="#">Написать в Telegram</a>
+      <a class="book" href="https://calink.ru/antirutina/30min">
+        <!-- ФОТО: поставьте свой снимок. Если файл не загрузится, останется серый круг. -->
+        <img class="book__avatar" src="https://i.postimg.cc/yd6bYX96/IMG-7327.avif" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+        <span>
+          <span class="book__primary">Разбор за 30 минут</span>
+          <span class="book__secondary"><i class="book__dot"></i>Выбрать время</span>
+        </span>
+      </a>
+    </div>
+
+    <div class="hero__blur" aria-hidden="true"></div>
+  </section>
+
+  <!-- ================= ПРОГРАММЫ ================= -->
+  <section class="tools">
+    <div class="tools__in">
+      <p class="tools__label">Достраиваем к тому, что у вас уже стоит</p>
+      <div class="tools__marquee marquee">
+        <div class="marquee__track">
+          <div class="marquee__group">
+            <b style="font-family:'Source Serif 4',serif;font-weight:600">amoCRM</b>
+            <b style="font-family:system-ui;font-weight:800">Битрикс24</b>
+            <b style="font-family:Georgia,serif;font-weight:500">1С</b>
+            <b style="font-family:Inter,sans-serif;font-weight:600">Telegram</b>
+            <b style="font-family:'Source Serif 4',sans-serif;font-weight:600">Инфодент</b>
+            <b style="font-family:system-ui;font-weight:600">Google Таблицы</b>
+            <b style="font-family:Inter,sans-serif;font-weight:700">WhatsApp</b>
+            <b style="font-family:Georgia,serif;font-weight:700">МойСклад</b>
+            <b style="font-family:Inter,sans-serif;font-weight:600">Notion</b>
+            <b style="font-family:'Source Serif 4',serif;font-weight:600">Excel</b>
+            <b style="font-family:Inter,sans-serif;font-weight:700">robokassa</b>
+          </div>
+          <div class="marquee__group" aria-hidden="true">
+            <b style="font-family:'Source Serif 4',serif;font-weight:600">amoCRM</b>
+            <b style="font-family:system-ui;font-weight:800">Битрикс24</b>
+            <b style="font-family:Georgia,serif;font-weight:500">1С</b>
+            <b style="font-family:Inter,sans-serif;font-weight:600">Telegram</b>
+            <b style="font-family:'Source Serif 4',sans-serif;font-weight:600">Инфодент</b>
+            <b style="font-family:system-ui;font-weight:600">Google Таблицы</b>
+            <b style="font-family:Inter,sans-serif;font-weight:700">WhatsApp</b>
+            <b style="font-family:Georgia,serif;font-weight:700">МойСклад</b>
+            <b style="font-family:Inter,sans-serif;font-weight:600">Notion</b>
+            <b style="font-family:'Source Serif 4',serif;font-weight:600">Excel</b>
+            <b style="font-family:Inter,sans-serif;font-weight:700">robokassa</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ЧТО ДЕЛАЕМ ================= -->
+  <section class="section wrap" id="chto">
+    <div class="head reveal">
+      <h2>Забираем ручную работу себе</h2>
+      <p>Человек должен принимать решения, а не переносить данные из окна в окно.</p>
+    </div>
+    <div class="stair">
+      <article class="stair__item reveal">
+        <h3>Смотрим, как устроена работа</h3>
+        <p>Разбираем процессы по шагам: кто что делает, сколько времени на это уходит, где всё застревает и теряется.</p>
+      </article>
+      <article class="stair__item reveal">
+        <h3>Убираем лишнее</h3>
+        <p>Часть действий не нужна вовсе — их отменяем. Остальное передаём программам: заявки, документы, отчёты, напоминания.</p>
+      </article>
+      <article class="stair__item reveal">
+        <h3>Отдаём готовое</h3>
+        <p>Вы получаете работающий процесс и короткую инструкцию. Ничего не нужно настраивать, изучать и держать в голове.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ================= ЧТО ПОЛУЧИТЕ ================= -->
+  <section class="section section--alt">
+    <div class="wrap">
+      <div class="head reveal"><h2>Четыре вещи, которые видно сразу</h2></div>
+      <div class="gains">
+        <div class="reveal">
+          <h3>Свободные часы команды</h3>
+          <p>Время, которое уходило на копирование и сверки, возвращается к клиентам и продажам.</p>
+        </div>
+        <div class="reveal">
+          <h3>Меньше ошибок</h3>
+          <p>Данные не переписываются руками, значит, не теряются и не путаются. Счёт не уходит дважды, заявка не остаётся без ответа.</p>
+        </div>
+        <div class="reveal">
+          <h3>Видно, что происходит</h3>
+          <p>В любой момент понятно, на каком шаге каждая заявка, задача и оплата. Без вопроса «а кто этим сейчас занимается?».</p>
+        </div>
+        <div class="reveal">
+          <h3>Рост без найма</h3>
+          <p>Заказов больше, а новых людей в штат нет. Процесс тянет объём, который раньше требовал ещё одного сотрудника.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ЧТО ВЫЧЁРКИВАЕМ ================= -->
+  <section class="section wrap" id="primery">
+    <div class="head reveal">
+      <h2>Что мы обычно вычёркиваем</h2>
+      <p>Список неполный, но если делаете что-то похожее руками, это можно убрать.</p>
+    </div>
+    <div class="groups">
+      <div class="group reveal">
+        <h3>Продажи и клиенты</h3>
+        <ul>
+          <li>Переносить заявки с сайта и из мессенджеров в CRM</li>
+          <li>Раздавать лиды менеджерам вручную</li>
+          <li>Помнить, кому и когда перезвонить</li>
+          <li>Отвечать одно и то же по десять раз в день</li>
+        </ul>
+      </div>
+      <div class="group reveal">
+        <h3>Документы</h3>
+        <ul>
+          <li>Заполнять счета, акты и договоры по шаблону</li>
+          <li>Собирать подписи и согласования по чатам</li>
+          <li>Искать нужный файл в общей папке</li>
+          <li>Следить за нумерацией и датами</li>
+        </ul>
+      </div>
+      <div class="group reveal">
+        <h3>Деньги</h3>
+        <ul>
+          <li>Сверять поступления с выставленными счетами</li>
+          <li>Писать клиентам напоминания об оплате</li>
+          <li>Собирать сводку по деньгам вручную</li>
+          <li>Догонять должников по списку</li>
+        </ul>
+      </div>
+      <div class="group reveal">
+        <h3>Отчёты</h3>
+        <ul>
+          <li>Сводить цифры из нескольких таблиц</li>
+          <li>Готовить одну и ту же выгрузку каждую неделю</li>
+          <li>Просить сотрудников прислать данные</li>
+          <li>Проверять, кто что не заполнил</li>
+        </ul>
+      </div>
+      <div class="group reveal">
+        <h3>Внутренняя работа</h3>
+        <ul>
+          <li>Принимать заявки сотрудников в личных сообщениях</li>
+          <li>Проводить согласования по цепочке вручную</li>
+          <li>Каждый раз объяснять новичку одно и то же</li>
+          <li>Держать чек-листы в голове</li>
+        </ul>
+      </div>
+      <div class="group reveal">
+        <h3>Связь с клиентами</h3>
+        <ul>
+          <li>Рассылать уведомления по одному</li>
+          <li>Сообщать статус заказа вручную</li>
+          <li>Собирать отзывы вслед за каждой сделкой</li>
+          <li>Копировать переписку в карточку клиента</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= КАК ПРОХОДИТ ================= -->
+  <section class="section section--alt" id="kak">
+    <div class="wrap">
+      <div class="head reveal"><h2>От разговора до работающего процесса</h2></div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step__n">01</div>
+          <h3>Разговор, 30 минут</h3>
+          <p>Рассказываете, что съедает время. Задаём вопросы и уточняем детали. Бесплатно, без презентаций и продажи «пакетов».</p>
+        </div>
+        <div class="step reveal">
+          <div class="step__n">02</div>
+          <h3>Разбор и план</h3>
+          <p>Показываем, какие действия можно убрать, что это даст в часах и деньгах и сколько будет стоить. Вы видите цифры до оплаты.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step__n">03</div>
+          <h3>Делаем</h3>
+          <p>Собираем и запускаем процесс. Держим вас в курсе, но не дёргаем по мелочам и не просим ничего чертить.</p>
+        </div>
+        <div class="step reveal">
+          <div class="step__n">04</div>
+          <h3>Остаёмся рядом</h3>
+          <p>Следим, чтобы работало. Меняем, когда меняется бизнес: новые люди, новые услуги, новый объём.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ЦЕНА. ПРОВЕРЬТЕ ПОД СВОЮ МОДЕЛЬ ================= -->
+  <section class="section wrap" id="cena">
+    <div class="price">
+      <div class="reveal">
+        <h2>Платите за убранную рутину, а не за «проект»</h2>
+        <p>Считаем стоимость по конкретной задаче: сколько времени она отнимает сейчас и сколько будет стоить её убрать. Начать можно с одного процесса — самого раздражающего.</p>
+      </div>
+      <div class="price__box reveal">
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg><span>Первый разбор и план бесплатно</span></li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg><span>Цену и срок называем до начала работ</span></li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg><span>Небольшую задачу закрываем за несколько дней</span></li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg><span>Без обязательной подписки и «внедрения на год»</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ВОПРОСЫ ================= -->
+  <section class="section wrap" id="voprosy">
+    <div class="head reveal"><h2>Что обычно спрашивают</h2></div>
+    <div class="faq reveal">
+      <details>
+        <summary>У нас всё в WhatsApp и Excel. С этим можно работать?</summary>
+        <p>Да, чаще всего именно с этого и начинаем. Порядок до старта не обязателен. Навести его — как раз наша работа.</p>
+      </details>
+      <details>
+        <summary>Придётся менять CRM и другие программы?</summary>
+        <p>Нет. Мы достраиваем к тому, чем вы уже пользуетесь. Менять что-то предлагаем, только если старое реально мешает, и объясняем почему.</p>
+      </details>
+      <details>
+        <summary>Сколько времени это займёт у меня лично?</summary>
+        <p>Разговор на 30 минут в начале и короткие сверки по ходу. Всё остальное — на нашей стороне.</p>
+      </details>
+      <details>
+        <summary>А если сотрудники будут против?</summary>
+        <p>Обычно наоборот: мы убираем самую нелюбимую часть их работы. Новое показываем на простых примерах, а не в виде инструкции на двадцать страниц.</p>
+      </details>
+      <details>
+        <summary>Мы небольшая компания. Нам не рано?</summary>
+        <p>Небольшой команде рутина мешает сильнее всего: людей мало, а копировать и сверять всё равно кто-то должен. Начать можно с одного процесса.</p>
+      </details>
+      <details>
+        <summary>Что будет, если однажды перестанет работать?</summary>
+        <p>Остаёмся на связи и чиним. Процесс собран так, чтобы его можно было передать другим: вы не остаётесь заложником одного подрядчика.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ================= ФИНАЛ ================= -->
+  <section class="section final wrap">
+    <div class="reveal">
+      <h2>Что у вас делают <span class="serif italic">вручную</span>?</h2>
+      <p>Напишите одной строкой. За 30 минут разберём и скажем, что из этого можно убрать. Без обязательств и без счёта в конце разговора.</p>
+      <div class="cta">
+        <a class="btn js-tg" href="#">Написать в Telegram</a>
+      </div>
+      <p class="final__sign">Убираем лишние действия, оставляем результат</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer wrap">
+  <div class="footer__in">
+    <a href="#top" aria-label="Антирутина"><img src="logo.png" alt="Антирутина" width="437" height="168"></a>
+    <p class="footer__tag">Автоматизация бизнес-процессов</p>
+    <a class="link js-tg" href="#">Telegram</a>
+  </div>
+</footer>
+
+<script>
+/* ==========================================================
+   ВСТАВЬТЕ ССЫЛКУ НА TELEGRAM. Например "https://t.me/antirutina"
+   ========================================================== */
+const TELEGRAM = "https://t.me/karpenkomaxim";
+
+document.querySelectorAll(".js-tg").forEach(function(el){
+  el.setAttribute("href", TELEGRAM);
+  el.setAttribute("target","_blank");
+  el.setAttribute("rel","noopener");
+});
+
+document.getElementById("year").textContent = new Date().getFullYear();
+
+/* шторка */
+const btn = document.getElementById("menuBtn");
+const drawer = document.getElementById("drawer");
+function setDrawer(open){
+  drawer.classList.toggle("is-open", open);
+  btn.setAttribute("aria-expanded", String(open));
+  document.body.style.overflow = open ? "hidden" : "";
+}
+btn.addEventListener("click", function(){ setDrawer(!drawer.classList.contains("is-open")); });
+drawer.addEventListener("click", function(e){ if(e.target.tagName === "A") setDrawer(false); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") setDrawer(false); });
+
+/* декоративные дуги */
+(function(){
+  const box = document.getElementById("lines");
+  const N = 20;
+  let html = "";
+  for(let i=0;i<N;i++){
+    const w = 60 + i*10, d = (i*0.25).toFixed(2) + "s";
+    html += '<i class="line line--l" style="left:0;top:50%;transform:translateY(-50%);width:'+w+'px;height:'+(160+i*26)+'px;animation-delay:'+d+'"></i>';
+    html += '<i class="line line--r" style="right:0;top:50%;transform:translateY(-50%);width:'+w+'px;height:'+(160+i*26)+'px;animation-delay:'+d+'"></i>';
+    html += '<i class="line line--t" style="left:50%;top:0;transform:translateX(-50%);height:'+w+'px;width:'+(160+i*26)+'px;animation-delay:'+d+'"></i>';
+  }
+  box.innerHTML = html;
+})();
+
+/* появление */
+const io = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("is-in"); io.unobserve(e.target); } });
+}, { threshold:0.12, rootMargin:"0px 0px -40px 0px" });
+document.querySelectorAll(".reveal").forEach(function(el){ io.observe(el); });
+</script>
+
+<!--
+  ШРИФТЫ грузятся с Google Fonts (Inter + Source Serif 4).
+  Чтобы перенести на свой хостинг: gwfh.mranftl.com, подмножества latin + cyrillic,
+  файлы в /fonts, вместо тега <link> пропишите @font-face с font-display:swap.
+-->
+
+</body>
+</html>
